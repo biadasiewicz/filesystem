@@ -450,6 +450,77 @@ namespace
 
   //  directory_iterator_tests  --------------------------------------------------------//
 
+  template<typename TIterator>
+  void test_directory_iterator_basic_operations()
+  {
+    // test the basic operation of directory iterators, and test that
+    // stepping one iterator doesn't affect a different iterator.
+
+    error_code ec;
+
+    typedef std::vector<fs::directory_entry> vec_type;
+    vec_type vec;
+
+    TIterator it1(dir);
+    BOOST_TEST(it1 != TIterator());
+    BOOST_TEST(fs::exists(it1->status()));
+    vec.push_back(*it1);
+    BOOST_TEST(*it1 == vec[0]);
+
+    TIterator it2(dir);
+    BOOST_TEST(it2 != TIterator());
+    BOOST_TEST(*it1 == *it2);
+
+    ++it1;
+    BOOST_TEST(it1 != TIterator());
+    BOOST_TEST(fs::exists(it1->status()));
+    BOOST_TEST(it1 != it2);
+    BOOST_TEST(*it1 != vec[0]);
+    BOOST_TEST(*it2 == vec[0]);
+    vec.push_back(*it1);
+
+    ++it1;
+    BOOST_TEST(it1 != TIterator());
+    BOOST_TEST(fs::exists(it1->status()));
+    BOOST_TEST(it1 != it2);
+    BOOST_TEST(*it2 == vec[0]);
+    vec.push_back(*it1);
+
+    ++it1;
+    BOOST_TEST(it1 != TIterator());
+    BOOST_TEST(fs::exists(it1->status()));
+    BOOST_TEST(it1 != it2);
+    BOOST_TEST(*it2 == vec[0]);
+    vec.push_back(*it1);
+
+    ++it1;
+    BOOST_TEST(it1 == TIterator());
+
+    BOOST_TEST(*it2 == vec[0]);
+    ec.clear();
+    it2.increment(ec);
+    BOOST_TEST(!ec);
+    BOOST_TEST(it2 != TIterator());
+    BOOST_TEST(it1 == TIterator());
+    BOOST_TEST(*it2 == vec[1]);
+    ++it2;
+    BOOST_TEST(*it2 == vec[2]);
+    BOOST_TEST(it1 == TIterator());
+    ++it2;
+    BOOST_TEST(*it2 == vec[3]);
+    ++it2;
+    BOOST_TEST(it1 == TIterator());
+    BOOST_TEST(it2 == TIterator());
+
+    // sort vec and check that the right directory entries were found
+    std::sort(vec.begin(), vec.end());
+
+    BOOST_TEST_EQ(vec[0].path().filename().string(), std::string("d1"));
+    BOOST_TEST_EQ(vec[1].path().filename().string(), std::string("d2"));
+    BOOST_TEST_EQ(vec[2].path().filename().string(), std::string("f0"));
+    BOOST_TEST_EQ(vec[3].path().filename().string(), std::string("f1"));
+  }
+
   void directory_iterator_tests()
   {
     cout << "directory_iterator_tests..." << endl;
@@ -491,71 +562,7 @@ namespace
     BOOST_TEST(fs::exists(d2));
     BOOST_TEST(fs::is_directory(d2));
 
-    // test the basic operation of directory_iterators, and test that
-    // stepping one iterator doesn't affect a different iterator.
-    {
-      typedef std::vector<fs::directory_entry> vec_type;
-      vec_type vec;
-
-      fs::directory_iterator it1(dir);
-      BOOST_TEST(it1 != fs::directory_iterator());
-      BOOST_TEST(fs::exists(it1->status()));
-      vec.push_back(*it1);
-      BOOST_TEST(*it1 == vec[0]);
-
-      fs::directory_iterator it2(dir);
-      BOOST_TEST(it2 != fs::directory_iterator());
-      BOOST_TEST(*it1 == *it2);
-
-      ++it1;
-      BOOST_TEST(it1 != fs::directory_iterator());
-      BOOST_TEST(fs::exists(it1->status()));
-      BOOST_TEST(it1 != it2);
-      BOOST_TEST(*it1 != vec[0]);
-      BOOST_TEST(*it2 == vec[0]);
-      vec.push_back(*it1);
-
-      ++it1;
-      BOOST_TEST(it1 != fs::directory_iterator());
-      BOOST_TEST(fs::exists(it1->status()));
-      BOOST_TEST(it1 != it2);
-      BOOST_TEST(*it2 == vec[0]);
-      vec.push_back(*it1);
-
-      ++it1;
-      BOOST_TEST(it1 != fs::directory_iterator());
-      BOOST_TEST(fs::exists(it1->status()));
-      BOOST_TEST(it1 != it2);
-      BOOST_TEST(*it2 == vec[0]);
-      vec.push_back(*it1);
-
-      ++it1;
-      BOOST_TEST(it1 == fs::directory_iterator());
-
-      BOOST_TEST(*it2 == vec[0]);
-      ec.clear();
-      it2.increment(ec);
-      BOOST_TEST(!ec);
-      BOOST_TEST(it2 != fs::directory_iterator());
-      BOOST_TEST(it1 == fs::directory_iterator());
-      BOOST_TEST(*it2 == vec[1]);
-      ++it2;
-      BOOST_TEST(*it2 == vec[2]);
-      BOOST_TEST(it1 == fs::directory_iterator());
-      ++it2;
-      BOOST_TEST(*it2 == vec[3]);
-      ++it2;
-      BOOST_TEST(it1 == fs::directory_iterator());
-      BOOST_TEST(it2 == fs::directory_iterator());
-
-      // sort vec and check that the right directory entries were found
-      std::sort(vec.begin(), vec.end());
-
-      BOOST_TEST_EQ(vec[0].path().filename().string(), std::string("d1"));
-      BOOST_TEST_EQ(vec[1].path().filename().string(), std::string("d2"));
-      BOOST_TEST_EQ(vec[2].path().filename().string(), std::string("f0"));
-      BOOST_TEST_EQ(vec[3].path().filename().string(), std::string("f1"));
-    }
+    test_directory_iterator_basic_operations<fs::directory_iterator>();
 
     { // *i++ must meet the standard's InputIterator requirements
       fs::directory_iterator dir_itr(dir);
@@ -615,6 +622,73 @@ namespace
     }
 
     cout << "  directory_iterator_tests complete" << endl;
+  }
+
+  //  sorted_directory_iterator_tests  ----------------------------------------------//
+
+  void sorted_directory_iterator_tests()
+  {
+    cout << "sorted_directory_iterator_tests..." << endl;
+
+    // directory tree:
+    // dir
+    //     d1
+    //     d2
+    //     f0
+    //     f1
+
+    error_code ec;
+
+    { // construction
+
+      bool dir_itr_exception(false);
+      try { fs::sorted_directory_iterator it(""); }
+      catch (const fs::filesystem_error &) { dir_itr_exception = true; }
+      BOOST_TEST(dir_itr_exception);
+
+      BOOST_TEST(!ec);
+      fs::directory_iterator it("", ec);
+      BOOST_TEST(ec);
+
+      dir_itr_exception = false;
+      try { fs::sorted_directory_iterator itx("nosuchdirectory"); }
+      catch (const fs::filesystem_error &) { dir_itr_exception = true; }
+      BOOST_TEST(dir_itr_exception);
+
+      ec.clear();
+      fs::directory_iterator it2x("nosuchdirectory", ec);
+      BOOST_TEST(ec);
+
+      dir_itr_exception = false;
+      ec.clear();
+      try
+      {
+        fs::directory_iterator itx("nosuchdirectory", ec);
+        BOOST_TEST(ec);
+        BOOST_TEST(ec == boost::system::errc::no_such_file_or_directory);
+      }
+      catch (const fs::filesystem_error &) { dir_itr_exception = true; }
+      BOOST_TEST(!dir_itr_exception);
+
+      dir_itr_exception = false;
+      try { fs::sorted_directory_iterator itx(dir); }
+      catch (const fs::filesystem_error &) { dir_itr_exception = true; }
+      BOOST_TEST(!dir_itr_exception);
+
+      dir_itr_exception = false;
+      ec.clear();
+      try { fs::sorted_directory_iterator itx(dir, ec); }
+      catch (const fs::filesystem_error &) { dir_itr_exception = true; }
+      BOOST_TEST(!dir_itr_exception);
+      BOOST_TEST(!ec);
+    }
+
+    { // basic operations
+      test_directory_iterator_basic_operations<
+        fs::sorted_directory_iterator>();
+    }
+
+    cout << "  sorted_directory_iterator_tests complete" << endl;
   }
 
   //  recursive_directory_iterator_tests  ----------------------------------------------//
@@ -2243,6 +2317,7 @@ int cpp_main(int argc, char* argv[])
   status_of_nonexistent_tests();
   status_error_reporting_tests();
   directory_iterator_tests();
+  sorted_directory_iterator_tests();
   create_directories_tests();  // must run AFTER directory_iterator_tests
 
   bad_create_directory_path = f1;

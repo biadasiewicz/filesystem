@@ -2404,5 +2404,38 @@ namespace detail
     }
   }
 }  // namespace detail
+
+  void sorted_directory_iterator::construct_cache(const path & dir_path)
+  {
+    m_cache.reset(new std::vector<directory_entry>);
+
+    for(directory_iterator iter(dir_path);
+        iter != directory_iterator();
+        ++iter)
+    {
+      m_cache->push_back(*iter);
+    }
+  }
+
+  void sorted_directory_iterator::construct_cache(const path & dir_path,
+                                                  system::error_code & ec)
+  {
+    m_cache.reset(new std::vector<directory_entry>);
+
+    ec.clear();
+
+    for(directory_iterator iter(dir_path, ec);
+        iter != directory_iterator();
+        iter.increment(ec))
+    {
+      if(ec)
+      {
+        m_cache.reset();
+        return;
+      }
+      m_cache->push_back(*iter);
+    }
+  }
+
 } // namespace filesystem
 } // namespace boost

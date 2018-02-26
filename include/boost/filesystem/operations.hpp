@@ -32,6 +32,9 @@
 #include <boost/utility/enable_if.hpp>
 #include <boost/type_traits/is_same.hpp>
 #include <boost/cstdint.hpp>
+#include <boost/range/mutable_iterator.hpp>
+#include <boost/range/const_iterator.hpp>
+#include <boost/iterator/distance.hpp>
 #include <boost/assert.hpp>
 #include <string>
 #include <utility> // for pair
@@ -1370,6 +1373,122 @@ namespace filesystem
   }
 
   } // namespace filesystem
+
+namespace filesystem
+{
+
+//--------------------------------------------------------------------------------------//
+//                                                                                      //
+//                          sorted_directory_iterator                                   //
+//                                                                                      //
+//--------------------------------------------------------------------------------------//
+
+  class sorted_directory_iterator
+    : public boost::iterator_facade< sorted_directory_iterator,
+                                     directory_entry,
+                                     boost::random_access_traversal_tag >
+  {
+  public:
+      sorted_directory_iterator() BOOST_NOEXCEPT {}
+
+      sorted_directory_iterator(const path & dir_path)
+      {
+        construct_cache(dir_path);
+        m_current = m_cache->begin();
+      }
+
+      sorted_directory_iterator(const path & dir_path,
+                                system::error_code & ec) BOOST_NOEXCEPT
+      {
+        construct_cache(dir_path, ec);
+        if(!ec)
+          m_current = m_cache->begin();
+      }
+
+      sorted_directory_iterator&
+      increment(system::error_code & ) BOOST_NOEXCEPT
+      {
+        increment();
+        return *this;
+      }
+
+  private:
+      // shared_ptr rationale: after construction of cache
+      // it is not changed anymore, so it can be shallow copy
+      boost::shared_ptr< std::vector< directory_entry > > m_cache;
+
+      // random access iterator that indicates current position
+      std::vector< directory_entry >::iterator m_current;
+
+
+      friend class boost::iterator_core_access;
+
+      directory_entry & dereference() const
+      {
+        return *m_current;
+      }
+
+      bool equal(const sorted_directory_iterator & rhs) const BOOST_NOEXCEPT
+      {
+        return (m_cache == rhs.m_cache && m_current == rhs.m_current)
+            || (m_cache && !rhs.m_cache && m_current == m_cache->end())
+            || (rhs.m_cache && !m_cache && rhs.m_current == rhs.m_cache->end());
+      }
+
+      void increment() BOOST_NOEXCEPT
+      {
+        ++m_current;
+      }
+
+      void decrement() BOOST_NOEXCEPT
+      {
+        --m_current;
+      }
+
+      void advance(difference_type n) BOOST_NOEXCEPT
+      {
+        m_current += n;
+      }
+
+      difference_type distance_to(const sorted_directory_iterator & z) const BOOST_NOEXCEPT
+      {
+        if(*this == sorted_directory_iterator()
+           && z == sorted_directory_iterator())
+        {
+          return 0;
+        }
+
+        return boost::distance(m_cache ? m_current : z.m_cache->end(),
+                               z.m_cache ? z.m_current : m_cache->end());
+      }
+
+
+      void construct_cache(const path &);
+      void construct_cache(const path &, system::error_code &);
+  };
+
+  inline const sorted_directory_iterator &
+  begin(const sorted_directory_iterator & it) BOOST_NOEXCEPT
+    {return it;}
+
+  inline sorted_directory_iterator
+  end(const sorted_directory_iterator &) BOOST_NOEXCEPT
+    {return sorted_directory_iterator();}
+
+  //  enable sorted_directory_iterator BOOST_FOREACH  -----------------------//
+
+  inline sorted_directory_iterator&
+  range_begin(sorted_directory_iterator& iter) BOOST_NOEXCEPT
+    {return iter;}
+  inline sorted_directory_iterator
+  range_begin(const sorted_directory_iterator& iter) BOOST_NOEXCEPT
+    {return iter;}
+
+  inline sorted_directory_iterator
+  range_end(const sorted_directory_iterator&) BOOST_NOEXCEPT
+    {return sorted_directory_iterator();}
+
+} // namespace filesystem
 } // namespace boost
 
 #include <boost/config/abi_suffix.hpp> // pops abi_prefix.hpp pragmas
