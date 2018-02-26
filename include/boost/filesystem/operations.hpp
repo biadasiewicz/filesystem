@@ -1405,11 +1405,34 @@ namespace filesystem
           m_current = m_cache->begin();
       }
 
+      template<typename TComparator>
+      sorted_directory_iterator(const path& dir_path,
+                                TComparator compare)
+      {
+        construct_cache(dir_path);
+        sort(compare);
+      }
+
+      template<typename TComparator>
+      sorted_directory_iterator(const path& dir_path,
+                                TComparator compare,
+                                system::error_code & ec) BOOST_NOEXCEPT
+      {
+        construct_cache(dir_path, ec);
+        if(!ec)
+          sort(compare);
+      }
+
       sorted_directory_iterator&
       increment(system::error_code & ) BOOST_NOEXCEPT
       {
         increment();
         return *this;
+      }
+
+      void rewind() BOOST_NOEXCEPT
+      {
+        m_current = m_cache->begin();
       }
 
   private:
@@ -1465,7 +1488,17 @@ namespace filesystem
 
       void construct_cache(const path &);
       void construct_cache(const path &, system::error_code &);
+
+      template<typename TComparator>
+      void sort(TComparator & compare);
   };
+
+  template<typename TComparator>
+  void sorted_directory_iterator::sort(TComparator & compare)
+  {
+    std::sort(m_cache->begin(), m_cache->end(), compare);
+    m_current = m_cache->begin();
+  }
 
   inline const sorted_directory_iterator &
   begin(const sorted_directory_iterator & it) BOOST_NOEXCEPT

@@ -626,6 +626,15 @@ namespace
 
   //  sorted_directory_iterator_tests  ----------------------------------------------//
 
+  struct compare_filename
+  {
+    bool operator()(const fs::directory_entry & a,
+                    const fs::directory_entry & b) const
+    {
+      return a < b;
+    }
+  };
+
   void sorted_directory_iterator_tests()
   {
     cout << "sorted_directory_iterator_tests..." << endl;
@@ -638,6 +647,7 @@ namespace
     //     f1
 
     error_code ec;
+    compare_filename compare;
 
     { // construction
 
@@ -686,6 +696,125 @@ namespace
     { // basic operations
       test_directory_iterator_basic_operations<
         fs::sorted_directory_iterator>();
+    }
+
+
+    using boost::distance;
+
+    { // distance
+
+      ec.clear();
+      fs::directory_iterator::difference_type dist(
+        distance(fs::directory_iterator(dir), fs::directory_iterator()));
+
+      fs::sorted_directory_iterator iter(dir, compare, ec), end;
+      BOOST_TEST(!ec);
+      BOOST_TEST(iter != end);
+
+      BOOST_TEST_EQ(distance(iter, end), dist);
+      BOOST_TEST(iter != end);
+      BOOST_TEST_EQ(distance(end, iter), -dist);
+      BOOST_TEST_EQ(distance(end, end), 0);
+
+      ++iter;
+      --dist;
+      BOOST_TEST(iter != end);
+      BOOST_TEST_EQ(distance(iter, end), dist);
+      BOOST_TEST_EQ(distance(end, iter), -dist);
+
+      fs::sorted_directory_iterator ita(iter);
+      BOOST_TEST(ita == iter);
+      BOOST_TEST_EQ(distance(ita, iter), 0);
+      BOOST_TEST_EQ(distance(ita, end), dist);
+      BOOST_TEST_EQ(distance(end, ita), -dist);
+
+      ++iter;
+      --dist;
+      BOOST_TEST(iter != end);
+      BOOST_TEST_EQ(distance(iter, end), dist);
+      BOOST_TEST_EQ(distance(end, iter), -dist);
+
+      fs::sorted_directory_iterator itb(iter);
+      BOOST_TEST(itb == iter);
+      BOOST_TEST(itb != ita);
+      BOOST_TEST_EQ(distance(itb, end), dist);
+      BOOST_TEST_EQ(distance(itb, end), distance(iter, end));
+
+      --itb;
+      BOOST_TEST(itb != end);
+      BOOST_TEST(itb != iter);
+      BOOST_TEST(itb == ita);
+      BOOST_TEST_EQ(distance(ita, itb), 0);
+      BOOST_TEST_EQ(distance(itb, ita), 0);
+
+      ++iter;
+      --dist;
+      BOOST_TEST(iter != end);
+      BOOST_TEST_EQ(distance(iter, end), dist);
+      BOOST_TEST_EQ(distance(end, iter), -dist);
+
+      ++iter;
+      --dist;
+      BOOST_TEST(iter == end);
+      BOOST_TEST(iter != ita);
+      BOOST_TEST(iter != itb);
+      BOOST_TEST_EQ(distance(iter, end), 0);
+      BOOST_TEST_EQ(distance(end, iter), 0);
+      BOOST_TEST_EQ(dist, 0);
+    }
+
+    { // rewinding
+
+      fs::sorted_directory_iterator iter(dir, compare, ec), start, end;
+      start = iter;
+
+      BOOST_TEST(!ec);
+      BOOST_TEST(iter != end);
+      BOOST_TEST(iter == start);
+
+      ++iter;
+      BOOST_TEST(iter != start);
+      fs::sorted_directory_iterator::difference_type dist = distance(iter, end);
+      iter.rewind();
+      BOOST_TEST(iter == start);
+      BOOST_TEST(dist < distance(iter, end));
+
+      while(iter != end)
+        ++iter;
+      BOOST_TEST(iter == end);
+      iter.rewind();
+      BOOST_TEST(iter != end);
+      BOOST_TEST(iter == start);
+    }
+
+    { // are paths sorted properly
+
+      fs::sorted_directory_iterator sorted_iter(dir, compare, ec), end;
+      BOOST_TEST(!ec);
+      BOOST_TEST(sorted_iter != end);
+
+      BOOST_TEST_EQ(distance(sorted_iter, end),
+        distance(fs::directory_iterator(dir), fs::directory_iterator()));
+
+      fs::directory_iterator iter(dir, ec);
+      BOOST_TEST(!ec);
+      BOOST_TEST(iter != fs::directory_iterator());
+
+      std::vector<fs::directory_entry> sorted_entries, entries;
+      for(;sorted_iter != end; ++sorted_iter)
+        sorted_entries.push_back(*sorted_iter);
+      for(;iter != fs::directory_iterator(); ++iter)
+        entries.push_back(*iter);
+
+      BOOST_TEST(!sorted_entries.empty());
+      BOOST_TEST(!entries.empty());
+      BOOST_TEST_EQ(sorted_entries.size(), entries.size());
+
+      // This test is disabled because on some filesystems entries are sorted in some way
+      //BOOST_TEST(sorted_entries != entries);
+
+      std::sort(entries.begin(), entries.end(), compare);
+      BOOST_TEST(sorted_entries == entries);
     }
 
     cout << "  sorted_directory_iterator_tests complete" << endl;
