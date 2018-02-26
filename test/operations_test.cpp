@@ -817,6 +817,40 @@ namespace
       BOOST_TEST(sorted_entries == entries);
     }
 
+    { // re-sorting
+
+      fs::sorted_directory_iterator iter(dir, compare), end;
+      BOOST_TEST(!ec);
+      BOOST_TEST(iter != end);
+
+      struct reverse_compare_filename
+      {
+        bool operator()(const fs::directory_entry & a,
+                        const fs::directory_entry & b)
+        {
+          return a > b;
+        }
+      } reverse_compare;
+
+      fs::sorted_directory_iterator rev_iter(iter, reverse_compare);
+      BOOST_TEST(!ec);
+      BOOST_TEST(iter != end);
+      BOOST_TEST(rev_iter != end);
+      BOOST_TEST(iter != rev_iter);
+      BOOST_TEST_EQ(distance(iter, end), distance(rev_iter, end));
+      BOOST_TEST(*iter != *rev_iter);
+
+      std::vector<fs::directory_entry> entries, rev_entries;
+      for(;iter != end; ++iter)
+        entries.push_back(*iter);
+      for(;rev_iter != end; ++rev_iter)
+        rev_entries.push_back(*rev_iter);
+      BOOST_TEST_EQ(entries.size(), rev_entries.size());
+      BOOST_TEST(entries != rev_entries);
+      std::sort(rev_entries.begin(), rev_entries.end(), compare);
+      BOOST_TEST(entries == rev_entries);
+    }
+
     cout << "  sorted_directory_iterator_tests complete" << endl;
   }
 

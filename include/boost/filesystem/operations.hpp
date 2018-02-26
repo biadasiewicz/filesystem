@@ -1423,6 +1423,26 @@ namespace filesystem
           sort(compare);
       }
 
+      template<typename TComparator>
+      sorted_directory_iterator(const sorted_directory_iterator & iter,
+                                TComparator compare)
+        : m_cache(new std::vector<directory_entry>(*iter.m_cache))
+      {
+        sort(compare);
+      }
+
+#ifndef BOOST_NO_CXX11_RVALUE_REFERENCES
+
+      template<typename TComparator>
+      sorted_directory_iterator(sorted_directory_iterator && iter,
+                                TComparator compare)
+        : m_cache(std::move(iter.m_cache))
+      {
+        sort(compare);
+      }
+
+#endif
+
       sorted_directory_iterator&
       increment(system::error_code & ) BOOST_NOEXCEPT
       {
