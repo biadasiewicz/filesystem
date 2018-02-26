@@ -1385,7 +1385,7 @@ namespace filesystem
 
   class sorted_directory_iterator
     : public boost::iterator_facade< sorted_directory_iterator,
-                                     directory_entry,
+                                     const directory_entry,
                                      boost::random_access_traversal_tag >
   {
   public:
@@ -1466,7 +1466,7 @@ namespace filesystem
 
       friend class boost::iterator_core_access;
 
-      directory_entry & dereference() const
+      const directory_entry & dereference() const
       {
         return *m_current;
       }
