@@ -1389,25 +1389,21 @@ namespace filesystem
                                      boost::random_access_traversal_tag >
   {
   public:
-      sorted_directory_iterator() BOOST_NOEXCEPT {}
+      typedef std::less<directory_entry> default_comparator;
 
-      sorted_directory_iterator(const path & dir_path)
-      {
-        construct_cache(dir_path);
-        m_current = m_cache->begin();
-      }
+      sorted_directory_iterator() BOOST_NOEXCEPT {}
 
       sorted_directory_iterator(const path & dir_path,
                                 system::error_code & ec) BOOST_NOEXCEPT
       {
         construct_cache(dir_path, ec);
         if(!ec)
-          m_current = m_cache->begin();
+          sort(default_comparator());
       }
 
-      template<typename TComparator>
+      template<typename TComparator = default_comparator>
       sorted_directory_iterator(const path& dir_path,
-                                TComparator compare)
+                                TComparator compare = TComparator())
       {
         construct_cache(dir_path);
         sort(compare);
@@ -1510,11 +1506,11 @@ namespace filesystem
       void construct_cache(const path &, system::error_code &);
 
       template<typename TComparator>
-      void sort(TComparator & compare);
+      void sort(TComparator compare);
   };
 
   template<typename TComparator>
-  void sorted_directory_iterator::sort(TComparator & compare)
+  void sorted_directory_iterator::sort(TComparator compare)
   {
     std::sort(m_cache->begin(), m_cache->end(), compare);
     m_current = m_cache->begin();

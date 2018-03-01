@@ -851,6 +851,30 @@ namespace
       BOOST_TEST(entries == rev_entries);
     }
 
+    { // default comparator
+
+      std::vector<fs::directory_entry> entries;
+      for(fs::directory_iterator it(dir);
+          it != fs::directory_iterator();
+          ++it)
+      {
+        entries.push_back(*it);
+      }
+      BOOST_TEST(!entries.empty());
+      std::sort(entries.begin(), entries.end(),
+                fs::sorted_directory_iterator::default_comparator());
+
+      std::vector<fs::directory_entry> sorted_entries;
+      for(fs::sorted_directory_iterator it(dir);
+          it != fs::sorted_directory_iterator();
+          ++it)
+      {
+        sorted_entries.push_back(*it);
+      }
+      BOOST_TEST(entries == sorted_entries);
+
+    }
+
     cout << "  sorted_directory_iterator_tests complete" << endl;
   }
 
