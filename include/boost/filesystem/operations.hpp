@@ -1396,9 +1396,13 @@ namespace filesystem
       sorted_directory_iterator(const path & dir_path,
                                 system::error_code & ec) BOOST_NOEXCEPT
       {
-        construct_cache(dir_path, ec);
-        if(!ec)
-          sort(default_comparator());
+        try {
+          construct_cache(dir_path, ec);
+          if(!ec)
+            sort(default_comparator());
+        } catch(const std::bad_alloc & e) {
+          ec = system::errc::make_error_code(system::errc::not_enough_memory);
+        }
       }
 
       template<typename TComparator = default_comparator>
@@ -1414,9 +1418,13 @@ namespace filesystem
                                 TComparator compare,
                                 system::error_code & ec) BOOST_NOEXCEPT
       {
-        construct_cache(dir_path, ec);
-        if(!ec)
-          sort(compare);
+        try {
+          construct_cache(dir_path, ec);
+          if(!ec)
+            sort(compare);
+        } catch(const std::bad_alloc & e) {
+          ec = system::errc::make_error_code(system::errc::not_enough_memory);
+        }
       }
 
       template<typename TComparator>
